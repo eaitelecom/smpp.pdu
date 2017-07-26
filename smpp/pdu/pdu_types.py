@@ -13,6 +13,9 @@ Copyright 2009-2010 Mozes, Inc.
    See the License for the specific language governing permissions and
    limitations under the License.
 """
+"""
+Updated code parts are marked with "Jasmin update" comment
+"""
 from enum import Enum
 from smpp.pdu.namedtuple import namedtuple
 from smpp.pdu import constants
@@ -123,6 +126,7 @@ PrivacyIndicator = Enum(*constants.privacy_indicator_name_map.keys())
 LanguageIndicator = Enum(*constants.language_indicator_name_map.keys())
 DisplayTime = Enum(*constants.display_time_name_map.keys())
 MsAvailabilityStatus = Enum(*constants.ms_availability_status_name_map.keys())
+NetworkErrorCode = Enum(*constants.network_error_code_name_map.keys())
 DeliveryFailureReason = Enum(*constants.delivery_failure_reason_name_map.keys())
 MoreMessagesToSend = Enum(*constants.more_messages_to_send_name_map.keys())
 
@@ -141,13 +145,15 @@ class PDU(object):
                 self.params[mParam] = None
     
     def __repr__(self):
+        # Jasmin update:
+        # Displaying values with %r converter since %s doesnt work with unicode
         r = "PDU [command: %s, sequence_number: %s, command_status: %s" % (self.id, self.seqNum, self.status)
         for mParam in self.mandatoryParams:
             if mParam in self.params:
-                r += "\n%s: %s" % (mParam, self.params[mParam])
+                r += "\n%s: %r" % (mParam, self.params[mParam])
         for oParam in self.params.keys():
             if oParam not in self.mandatoryParams:
-                r += "\n%s: %s" % (oParam, self.params[oParam])                
+                r += "\n%s: %r" % (oParam, self.params[oParam])                
         r += '\n]'
         return r
         

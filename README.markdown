@@ -1,4 +1,4 @@
-smpp.pdu is a Python library for parsing Protocol Data Units (PDUs) in SMPP protocol
+smpp.pdu is a Python library for parsing Protocol Data Units (PDUs) in SMPP protocol + Jasmin patches https://github.com/jookies/jasmin
 
 http://www.nowsms.com/discus/messages/1/24856.html 
 

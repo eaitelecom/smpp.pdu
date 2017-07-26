@@ -40,7 +40,7 @@ class EncoderTest(unittest.TestCase):
         file = StringIO.StringIO(encoded)
         decoded = encoder.decode(file)
         self.assertEquals(value, decoded)
-        
+
     def do_encode_test(self, encoder, value, hexdumpValue):
         encoded = encoder.encode(value)
         hexEncoded = binascii.b2a_hex(encoded)
@@ -54,7 +54,7 @@ class EncoderTest(unittest.TestCase):
                     print "Letter %d diff [%s] [%s]" % (i, chars1[i], chars2[i])
 
         self.assertEquals(hexdumpValue, hexEncoded)
-        
+
     def do_decode_test(self, encoder, value, hexdumpValue):
         decoded = self.decode(encoder.decode, hexdumpValue)
         self.assertEquals(value, decoded)
@@ -303,7 +303,8 @@ class SubaddressEncoderTest(EncoderTest):
         self.do_conversion_test(SubaddressEncoder(4), Subaddress(SubaddressTypeTag.USER_SPECIFIED, value='742'), 'a0373432')
 
     def test_decode_invalid_type(self):
-        self.do_decode_parse_error_test(SubaddressEncoder(4).decode, CommandStatus.ESME_RINVOPTPARAMVAL, 'a1373432')
+        "#325: any invalid type will be marked as RESERVED"
+        self.do_conversion_test(SubaddressEncoder(4), Subaddress(SubaddressTypeTag.RESERVED, value='742'), '00373432')
 
     def test_decode_invalid_size(self):
         self.do_decode_parse_error_test(SubaddressEncoder(1).decode, CommandStatus.ESME_RINVOPTPARAMVAL, 'a0373432')
@@ -399,6 +400,7 @@ class PDUEncoderTest(EncoderTest):
             replace_if_present_flag=ReplaceIfPresentFlag.DO_NOT_REPLACE,
             data_coding=DataCoding(schemeData=DataCodingDefault.LATIN_1),
             short_message='there is no spoon',
+            sm_default_msg_id=0,
         )
         self.do_conversion_test(PDUEncoder(), pdu, '0000004d00000005000000009f88f12441575342440001013136353035353531323334000101313737333535353430373000000000000000000300117468657265206973206e6f2073706f6f6e')
 
@@ -420,6 +422,7 @@ class PDUEncoderTest(EncoderTest):
             short_message='id:1891273321 sub:001 dlvrd:001 submit date:1305050826 done date:1305050826 stat:DELIVRD err:000 Text:DLVRD TO MOBILE\x00',
             message_state=MessageState.DELIVERED,
             receipted_message_id='70BA8A69',
+            sm_default_msg_id=0,
         )
         self.do_conversion_test(PDUEncoder(), pdu, '000000b900000005000000000000000a434d5400010036353135353535363738000100313233000400000000000000007669643a31383931323733333231207375623a30303120646c7672643a303031207375626d697420646174653a3133303530353038323620646f6e6520646174653a3133303530353038323620737461743a44454c49565244206572723a30303020546578743a444c56524420544f204d4f42494c45000427000102001e0009373042413841363900')
 
@@ -439,6 +442,7 @@ class PDUEncoderTest(EncoderTest):
             replace_if_present_flag=ReplaceIfPresentFlag.DO_NOT_REPLACE,
             data_coding=DataCoding(DataCodingScheme.GSM_MESSAGE_CLASS, DataCodingGsmMsg(DataCodingGsmMsgCoding.DEFAULT_ALPHABET, DataCodingGsmMsgClass.CLASS_2)),
             short_message='HELLO\x00',
+            sm_default_msg_id = 0,
         )
         self.do_conversion_test(PDUEncoder(), pdu, '0000003f000000050000000000000001434d540001003334313131343935303030303100010031323334353435350000000000000000f2000648454c4c4f00')
 
@@ -460,6 +464,7 @@ class PDUEncoderTest(EncoderTest):
             short_message="Hello I'm a bigg fan of you",
             source_subaddress=Subaddress(SubaddressTypeTag.USER_SPECIFIED, '742'),
             dest_subaddress=Subaddress(SubaddressTypeTag.USER_SPECIFIED, '4131'),
+            sm_default_msg_id=0,
         )
         self.do_conversion_test(PDUEncoder(), pdu, '00000066000000050000000000000001424d38000101343631323334353637383900010131343034363635333431300000000000000000f2001b48656c6c6f2049276d206120626967672066616e206f6620796f7502020004a037343202030005a034313331')
 
@@ -482,7 +487,7 @@ class PDUEncoderTest(EncoderTest):
             ms_availability_status=MsAvailabilityStatus.DENIED,
         )
         self.do_conversion_test(PDUEncoder(), pdu, '0000008900000102000000000000000002015858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858580001065959595959595959595959595959595959595959595959595959595959595959595959595959595959595959595959595959595959595959000422000101')
-    
+
     def test_QuerySMResp_conversion(self):
         pdu = QuerySMResp(
             message_id = 'Smsc2003',
@@ -507,6 +512,7 @@ class PDUEncoderTest(EncoderTest):
             registered_delivery=RegisteredDelivery(RegisteredDeliveryReceipt.SMSC_DELIVERY_RECEIPT_REQUESTED),
             replace_if_present_flag=ReplaceIfPresentFlag.DO_NOT_REPLACE,
             data_coding=DataCoding(DataCodingScheme.GSM_MESSAGE_CLASS, DataCodingGsmMsg(DataCodingGsmMsgCoding.DEFAULT_ALPHABET, DataCodingGsmMsgClass.CLASS_2)),
+            sm_default_msg_id=0,
             short_message='HELLO',
         )
         self.do_conversion_test(PDUEncoder(), pdu, '000000360000000400000000000024440005006d6f62696c65776179000101313230383233300000000000000100f2000548454c4c4f')
@@ -526,6 +532,7 @@ class PDUEncoderTest(EncoderTest):
             registered_delivery=RegisteredDelivery(RegisteredDeliveryReceipt.SMSC_DELIVERY_RECEIPT_REQUESTED),
             replace_if_present_flag=ReplaceIfPresentFlag.DO_NOT_REPLACE,
             data_coding=DataCoding(DataCodingScheme.GSM_MESSAGE_CLASS, DataCodingGsmMsg(DataCodingGsmMsgCoding.DATA_8BIT, DataCodingGsmMsgClass.CLASS_1)),
+            sm_default_msg_id=0,
             short_message=binascii.a2b_hex('06050415811581024a3a5db5a5cdcda5bdb8040084d8c51381481381481381481381481381381481581681781881881061881061b81081181081881061881061681081781081881061881061b81081181081881061881061681081781081b81881321081b81881221081b818811210824dc1446000')
         )
         self.do_conversion_test(PDUEncoder(), pdu, '000000a900000004000000000006f3910005006d6f62696c65776179000101333336393830393334320040000000000100f5007506050415811581024a3a5db5a5cdcda5bdb8040084d8c51381481381481381481381481381381481581681781881881061881061b81081181081881061881061681081781081881061881061b81081181081881061881061681081781081b81881321081b81881221081b818811210824dc1446000')
@@ -547,7 +554,7 @@ class PDUEncoderTest(EncoderTest):
 
     def test_decode_bad_message_ends_in_middle_of_option(self):
         self.do_decode_corrupt_data_error_test(PDUEncoder().decode, CommandStatus.ESME_RINVMSGLEN, '0000001b8000000900000000000000015453493735383800021000')
-        
+
     def test_SubmitSMResp_error_has_no_body(self):
         pdu = SubmitSMResp(1234, status=CommandStatus.ESME_RMSGQFUL)
         self.assertTrue(len(SubmitSMResp.mandatoryParams) > 0)
