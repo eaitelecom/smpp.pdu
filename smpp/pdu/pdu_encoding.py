@@ -13,6 +13,7 @@ Copyright 2009-2010 Mozes, Inc.
    See the License for the specific language governing permissions and
    limitations under the License.
 """
+from smpp.pdu.log import logger
 
 """
 Updated code parts are marked with "Jasmin update" comment
@@ -1114,7 +1115,13 @@ class PDUEncoder(IEncoder):
             if paramName in params:
                 tag = getattr(pdu_types.Tag, paramName)
                 value = params[paramName]
-                result += self.optionEncoder.encode(pdu_types.Option(tag, value))
+                try:
+                    result += self.optionEncoder.encode(pdu_types.Option(tag, value))
+                except:
+                    logger.exception(
+                        'Optional parameter parse error. Tag: "%s". Value: "%s". '
+                        'Ignore this parameter.' % (tag, value)
+                    )
         return result
 
     def decodeOptionalParams(self, paramList, file, optionsLength):
