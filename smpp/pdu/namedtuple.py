@@ -63,7 +63,6 @@ def namedtuple(typename, field_names, verbose=False, rename=False):
             raise ValueError('Encountered duplicate field name: %r' % name)
         seen_names.add(name)
 
-    # Create and fill-in the class template
     namespace = dict(
         _itemgetter=_itemgetter,
         __name__='namedtuple_%s' % typename,
@@ -72,19 +71,9 @@ def namedtuple(typename, field_names, verbose=False, rename=False):
     )
 
     try:
-        create_namedtuple(typename=typename, field_names=field_names)
+        result = create_namedtuple(typename=typename, field_names=field_names)
     except SyntaxError as e:
         raise SyntaxError(e.message)
-    result = namespace[typename]
-
-    # For pickling to work, the __module__ variable needs to be set to the frame
-    # where the named tuple is created.  Bypass this step in enviroments where
-    # sys._getframe is not defined (Jython for example) or sys._getframe is not
-    # defined for arguments greater than 0 (IronPython).
-    try:
-        result.__module__ = _sys._getframe(1).f_globals.get('__name__', '__main__')
-    except (AttributeError, ValueError):
-        pass
 
     return result
 
@@ -112,13 +101,14 @@ def create_namedtuple(typename, field_names):
         '_asdict': _asdict,
         '_replace': _replace,
         '__getnewargs__': lambda self: tuple(self),
-        '__repr__': lambda self: f"{typename}({', '.join(map(repr, self))})"
+        '__repr__': lambda self: f"{typename}({', '.join(map(repr, self))})",
+        '__module__': _sys._getframe(1).f_globals.get('__name__', '__main__')
     }
 
     for i, name in enumerate(field_names):
         class_dict[name] = property(_itemgetter(i))
     
-    return type(typename, (tuple,), class_dict)
+    return class_dict
 
 
 
