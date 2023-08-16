@@ -64,45 +64,17 @@ def namedtuple(typename, field_names, verbose=False, rename=False):
         seen_names.add(name)
 
     # Create and fill-in the class template
-    numfields = len(field_names)
-    argtxt = repr(field_names).replace("'", "")[1:-1]   # tuple repr without parens or quotes
-    reprtxt = ', '.join('%s=%%r' % name for name in field_names)
-    template = '''class %(typename)s(tuple):
-        '%(typename)s(%(argtxt)s)' \n
-        __slots__ = () \n
-        _fields = %(field_names)r \n
-        def __new__(_cls, %(argtxt)s):
-            return _tuple.__new__(_cls, (%(argtxt)s)) \n
-        @classmethod
-        def _make(cls, iterable, new=tuple.__new__, len=len):
-            'Make a new %(typename)s object from a sequence or iterable'
-            result = new(cls, iterable)
-            if len(result) != %(numfields)d:
-                raise TypeError('Expected %(numfields)d arguments, got %%d' %% len(result))
-            return result \n
-        def __repr__(self):
-            return '%(typename)s(%(reprtxt)s)' %% self \n
-        def _asdict(self):
-            'Return a new dict which maps field names to their values'
-            return dict(zip(self._fields, self)) \n
-        def _replace(_self, **kwds):
-            'Return a new %(typename)s object replacing specified fields with new values'
-            result = _self._make(map(kwds.pop, %(field_names)r, _self))
-            if kwds:
-                raise ValueError('Got unexpected field names: %%r' %% kwds.keys())
-            return result \n
-        def __getnewargs__(self):
-            return tuple(self) \n\n''' % locals()
-    for i, name in enumerate(field_names):
-        template += '        %s = _property(_itemgetter(%d))\n' % (name, i)
+    namespace = dict(
+        _itemgetter=_itemgetter,
+        __name__='namedtuple_%s' % typename,
+        _property=property,
+        _tuple=tuple
+    )
 
-    # Execute the template string in a temporary namespace
-    namespace = dict(_itemgetter=_itemgetter, __name__='namedtuple_%s' % typename,
-                     _property=property, _tuple=tuple)
     try:
-        exec(template in namespace)
+        create_namedtuple(typename=typename, field_names=field_names)
     except SyntaxError as e:
-        raise SyntaxError(e.message + ':\n' + template)
+        raise SyntaxError(e.message)
     result = namespace[typename]
 
     # For pickling to work, the __module__ variable needs to be set to the frame
@@ -116,7 +88,37 @@ def namedtuple(typename, field_names, verbose=False, rename=False):
 
     return result
 
+def create_namedtuple(typename, field_names):
+    def _make(self, iterable):
+        result = tuple.__new__(self, iterable)
+        if len(result) != len(self._fields):
+            raise TypeError(f"Expected {len(self._fields)} arguments, got {len(result)}")
+        return result
+    
+    def _asdict(self):
+        return dict(zip(self._fields, self))
+    
+    def _replace(self, **kwds):
+        updated_fields = [kwds.pop(name, getattr(self, name)) for name in self._fields]
+        if kwds:
+            raise ValueError(f"Got unexpected field names: {kwds.keys()}")
+        return self._make(updated_fields)
+    
+    class_dict = {
+        '__slots__': (),
+        '_fields': field_names,
+        '__new__': _make,
+        '_make': classmethod(_make),
+        '_asdict': _asdict,
+        '_replace': _replace,
+        '__getnewargs__': lambda self: tuple(self),
+        '__repr__': lambda self: f"{typename}({', '.join(map(repr, self))})"
+    }
 
+    for i, name in enumerate(field_names):
+        class_dict[name] = property(_itemgetter(i))
+    
+    return type(typename, (tuple,), class_dict)
 
 
 
