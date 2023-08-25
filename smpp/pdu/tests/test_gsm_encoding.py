@@ -46,7 +46,7 @@ class EncoderTest(unittest.TestCase):
         decoded = None
         try:
             decoded = decodeFunc(file)
-        except Exception, e:
+        except Exception as e:
             error = e
         self.assertEquals(len(bytes), file.tell())
         if error:
