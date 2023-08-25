@@ -32,15 +32,13 @@ EsmClassMode = Enum(*constants.esm_class_mode_name_map.keys())
 EsmClassType = Enum(*constants.esm_class_type_name_map.keys())
 EsmClassGsmFeatures = Enum(*constants.esm_class_gsm_features_name_map.keys())
 
-EsmClassBase = namedtuple('EsmClass', 'mode, type, gsmFeatures')
-
-class EsmClass(EsmClassBase):
+class EsmClass(tuple):
     
     def __new__(cls, mode, type, gsmFeatures=[]):
-        return EsmClassBase.__new__(cls, mode, type, set(gsmFeatures))
+        return super(EsmClass, cls).__new__(cls, (mode, type, set(gsmFeatures)))
         
     def __repr__(self):
-        return 'EsmClass[mode: %s, type: %s, gsmFeatures: %s]' % (self.mode, self.type, self.gsmFeatures)
+        return 'EsmClass[mode: %s, type: %s, gsmFeatures: %s]' % (self[0], self[1], self[2])
 
 RegisteredDeliveryReceipt = Enum(*constants.registered_delivery_receipt_name_map.keys())
 RegisteredDeliverySmeOriginatedAcks = Enum(*constants.registered_delivery_sme_originated_acks_name_map.keys())

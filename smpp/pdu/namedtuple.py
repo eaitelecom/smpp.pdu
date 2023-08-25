@@ -4,7 +4,7 @@ Licensed under Python Software Foundation license: http://www.opensource.org/lic
 
 """
 
-from operator import itemgetter as _itemgetter
+from operator import itemgetter
 from keyword import iskeyword as _iskeyword
 import sys as _sys
 
@@ -36,7 +36,7 @@ def namedtuple(typename, field_names, verbose=False, rename=False):
     # Parse and validate the field names.  Validation serves two purposes,
     # generating informative error messages and preventing template injection attacks.
     if isinstance(field_names, str):
-        field_names = field_names.replace(',', ' ').split() # names separated by whitespace and/or commas
+        field_names = field_names.replace(',', ' ').split()
     field_names = tuple(map(str, field_names))
     if rename:
         names = list(field_names)
@@ -62,55 +62,32 @@ def namedtuple(typename, field_names, verbose=False, rename=False):
         if name in seen_names:
             raise ValueError('Encountered duplicate field name: %r' % name)
         seen_names.add(name)
-
-    namespace = dict(
-        _itemgetter=_itemgetter,
-        __name__='namedtuple_%s' % typename,
-        _property=property,
-        _tuple=tuple
-    )
-
-    try:
-        result = create_namedtuple(typename=typename, field_names=field_names)
-    except SyntaxError as e:
-        raise SyntaxError(e.message)
-
-    return result
-
-def create_namedtuple(typename, field_names):
-    def _make(self, iterable):
-        result = tuple.__new__(self, iterable)
-        if len(result) != len(self._fields):
-            raise TypeError(f"Expected {len(self._fields)} arguments, got {len(result)}")
-        return result
-    
-    def _asdict(self):
-        return dict(zip(self._fields, self))
-    
-    def _replace(self, **kwds):
-        updated_fields = [kwds.pop(name, getattr(self, name)) for name in self._fields]
-        if kwds:
-            raise ValueError(f"Got unexpected field names: {kwds.keys()}")
-        return self._make(updated_fields)
     
     class_dict = {
         '__slots__': (),
         '_fields': field_names,
-        '__new__': _make,
-        '_make': classmethod(_make),
-        '_asdict': _asdict,
+        '_make': classmethod(tuple.__new__),
         '_replace': _replace,
         '__getnewargs__': lambda self: tuple(self),
-        '__repr__': lambda self: f"{typename}({', '.join(map(repr, self))})",
+        '__repr__': _repr,
         '__module__': _sys._getframe(1).f_globals.get('__name__', '__main__')
     }
-
-    for i, name in enumerate(field_names):
-        class_dict[name] = property(_itemgetter(i))
     
-    return class_dict
+    for i, name in enumerate(field_names):
+        class_dict[name] = property(itemgetter(i))
+    
+    result = type(typename, (tuple,), class_dict)
+    
+    return result
 
+def _replace(self, **kwds):
+    updated_fields = [kwds.pop(name, getattr(self, name)) for name in self._fields]
+    if kwds:
+        raise ValueError(f"Got unexpected field names: {kwds.keys()}")
+    return self._make(updated_fields)
 
+def _repr(self):
+    return '%s(%s)' % (self.__class__.__name__, ', '.join(map(repr, self)))
 
 
 if __name__ == '__main__':
